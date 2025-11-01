@@ -1,0 +1,14 @@
+git-health checker
+-----
+
+scrape all the github repo's and give us the data about how the repo is performing is that repo dying or not thats it.
+
+how to do it:
+- scrape github 5k req/hr 
+- when you get a github repo take it -> 
+                    save it as an object with -> 
+                            reponame:{link:github-link, likes, maintainers, last-commit-date, number-of-commits}
+- save all those info in .json file.
+- build a function to determine health of a repo with info we have 
+
+workflow:
