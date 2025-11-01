@@ -11,4 +11,8 @@ how to do it:
 - save all those info in .json file.
 - build a function to determine health of a repo with info we have 
 
-workflow:
+
+
+async scrape -> use 3 github tokens and rotate it 
+throw it in sql lite -> take it in -> analyze -> transoform -> store to postgress
+build a simple api 

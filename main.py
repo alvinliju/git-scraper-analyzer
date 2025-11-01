@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 import json
-
+import time
 
 GITHUB_TOKEN="REMOVED_TOKEN"
 BASE_URL="https://api.github.com/search/repositories"
@@ -134,6 +134,8 @@ def scan_all_repos_for_stats(repos: list):
     save_repo_details(parsedRepo)
     print(f"All {parsed_count} repo details saved successfully")
     return parsedRepo
+
+##stage 3 integrate 
 
 
 if __name__ == "__main__":
