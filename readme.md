@@ -62,7 +62,7 @@ GET /repos/top      - Top by stars CONFLICT for idempotency)
 
 ## Why it matters
 
-idk it seemed intresting enough to spend 2 nights spoling my sleep and messing my academics....
+idk it seemed intresting enough to spend 2 nights spoiling my sleep and messing my academics....
 
 ## Files
 
