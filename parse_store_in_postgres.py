@@ -13,6 +13,8 @@ conn = psycopg2.connect(
 cur = conn.cursor()
 
 def parse_and_store_in_postgres(repo_details: list):
+    repo_details = [repo for repo in repo_details if repo is not None]
+    print(f"Valid repos: {len(repo_details)}")
     for repo in repo_details:
         name = repo['name']
         link = repo['link']
