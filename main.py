@@ -3,7 +3,7 @@ import pandas as pd
 import json
 import time
 import psycopg2
-
+from dotenv import load_dotenv
 import asyncio
 import aiohttp
 from aiolimiter import AsyncLimiter
@@ -16,8 +16,13 @@ conn = psycopg2.connect(
 )
 cur = conn.cursor()
 
-GITHUB_TOKEN="REMOVED_TOKEN"
+load_dotenv()
+
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 BASE_URL="https://api.github.com/search/repositories"
+
+if not GITHUB_TOKEN:
+    raise ValueError("GITHUB_TOKEN not found in environment variables")
 
 # step 1: scrape github repo's
 def scrape_github_repos_with_page(page: int):

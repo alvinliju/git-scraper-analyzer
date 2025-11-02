@@ -1,3 +1,4 @@
 github_repos.json
 repo_details.json
-pycache/
+pycache/.env
+.env
