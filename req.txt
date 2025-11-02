@@ -16,3 +16,5 @@ how to do it:
 async scrape -> use 3 github tokens and rotate it 
 throw it in sql lite -> take it in -> analyze -> transoform -> store to postgress
 build a simple api 
+
+dlt duplicates by name " docker exec -it pgdb psql -U postgres -d postgres -c "DELETE FROM repos WHERE id NOT IN(SELECT MIN(id) FROM repos GROUP BY name)" "

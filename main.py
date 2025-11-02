@@ -165,15 +165,31 @@ def save_repo_details(parsedRepo: dict):
 
 ##run repo scans in parallel and see what breaks
 async def run_repo_scans_in_parallel(repos: list):
-    with open('repo_details.json', 'r') as f:
-        existing = json.load(f)
-    scraped_names = {r['name'] for r in existing if r}
-    repos = [r for r in repos if r['name'] not in scraped_names]
-    print(f"Skipping {len(scraped_names)} already scraped repos")
-    rate_limiter = AsyncLimiter(75, 60) 
-    tasks = [get_repo_details(repo, rate_limiter) for repo in repos]
-    result = await asyncio.gather(*tasks)
-    return result
+    try:
+        with open('repo_details.json', 'r') as f:
+            existing = json.load(f)
+        if existing is None or not isinstance(existing, list):
+            existing = []
+        
+        scraped_names = {r['name'] for r in existing if r}
+        repos = [r for r in repos if r['name'] not in scraped_names]
+        print(f"Skipping {len(scraped_names)} already scraped repos")
+    except FileNotFoundError:
+        pass
+       
+        rate_limiter = AsyncLimiter(75, 60) 
+        tasks = [get_repo_details(repo, rate_limiter) for repo in repos]
+        result = await asyncio.gather(*tasks)
+        filtered_result = []
+        for r in result:
+            if r is not None and not isinstance(r, Exception):
+                filtered_result.append(r)
+        if len(filtered_result) == 0:
+            print("All repos already scraped!")
+            return []  # Return empty list, not None
+        else:
+            print(f"Starting fresh: {len(filtered_result)} repos to scrape")
+        return filtered_result
 
 async def main():
     # print("Starting to scrape all github repos...")
@@ -191,4 +207,5 @@ async def main():
         json.dump(parsedRepo, f, ensure_ascii=False, indent=4)
     print("All repos scanned for stats successfully")
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

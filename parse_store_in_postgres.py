@@ -39,6 +39,16 @@ def parse_and_store_in_postgres(repo_details: list):
             """ 
             INSERT INTO repos (name, link, owner, stars, forks, watchers, open_issues, language, created_at, last_commit_date, commits_last_year, repo_age_days, days_since_last_commit, is_active, is_healthy)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (name) DO UPDATE SET
+                stars = EXCLUDED.stars,
+                forks = EXCLUDED.forks,
+                watchers = EXCLUDED.watchers,
+                open_issues = EXCLUDED.open_issues,
+                last_commit_date = EXCLUDED.last_commit_date,
+                commits_last_year = EXCLUDED.commits_last_year,
+                days_since_last_commit = EXCLUDED.days_since_last_commit,
+                is_active = EXCLUDED.is_active,
+                is_healthy = EXCLUDED.is_healthy
             """, 
             (name, link, owner, stars, forks, watchers, open_issues, language, created_at, last_commit_date, commits_last_year, repo_age_days, days_since_last_commit, is_active, is_healthy)
         )
