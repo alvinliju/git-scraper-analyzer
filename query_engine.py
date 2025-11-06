@@ -122,6 +122,9 @@ def execute_sql_query(question: str):
 
     if 'LIMIT' not in sql_query.upper():
         sql_query += ' LIMIT 100'
+
+    sql_query = sql_query.replace(";", "")
+    print(f"Executing SQL: {sql_query}")
     
 
     cur.execute("SET statement_timeout = 5000")
