@@ -3,6 +3,7 @@ import socketserver
 
 from flask import Flask, request, jsonify
 import psycopg2
+from query_engine import execute_sql_query
 
 app = Flask(__name__)
 
@@ -72,6 +73,19 @@ def get_repo_by_id(id):
 def get_stats():
     stats = fetch_stats()
     return jsonify(stats)
+
+
+@app.route('/query', methods=['POST'])
+def natural_language_query():
+    data = request.json
+    query = data.get('question')
+    if not query:
+        return jsonify({"error": "Query is required"}), 400
+    try:
+        columns, results = execute_sql_query(query)
+        return jsonify({"columns": columns, "results": results})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 

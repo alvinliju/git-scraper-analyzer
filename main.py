@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 import asyncio
 import aiohttp
 from aiolimiter import AsyncLimiter
+import os
+
 conn = psycopg2.connect(
     host="localhost",
     database="postgres",

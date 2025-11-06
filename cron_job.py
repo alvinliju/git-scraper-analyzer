@@ -3,7 +3,7 @@ import json
 from main import scrape_all_github_repos, save_all_github_repos, run_repo_scans_in_parallel
 from parse_store_in_postgres import parse_and_store_in_postgres
 import asyncio
-
+import os
 #scrape
 async def run_scraper():  
     repos = scrape_all_github_repos()
