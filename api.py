@@ -3,7 +3,7 @@ import socketserver
 
 from flask import Flask, request, jsonify
 import psycopg2
-from query_engine import execute_sql_query
+from query_engine import execute_sql_query_cached
 
 app = Flask(__name__)
 
@@ -82,12 +82,15 @@ def natural_language_query():
     if not query:
         return jsonify({"error": "Query is required"}), 400
     try:
-        columns, results = execute_sql_query(query)
+        result = execute_sql_query_cached(query)
+        print(f"Result type: {type(result)}")  # Debug
+        print(f"Result: {result}")  # Debug
+        columns, results = result  # This line is failing
         return jsonify({"columns": columns, "results": results})
     except Exception as e:
+        import traceback
+        traceback.print_exc()  # Print full error
         return jsonify({"error": str(e)}), 500
-
-
 
 if __name__ == "__main__":
     app.run(debug=True, port=3000)

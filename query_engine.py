@@ -4,9 +4,20 @@ from dotenv import load_dotenv
 import psycopg2
 from google import genai
 
+from libs.lru import LRUCache
+import hashlib
+
+
+
+CACHE_CAPACITY = 100
+
+query_cache = LRUCache(CACHE_CAPACITY)
+
 load_dotenv()
 gemini_api_key = os.getenv('GEMINI_API_KEY')
 client = genai.Client(api_key=gemini_api_key)
+
+
 
 SCHEMA_CONTEXT = """
 You are a SQL query generator for a GitHub repository database.
@@ -95,7 +106,15 @@ def is_safe_to_execute(query:str) -> bool:
 
 #     return columns, results
 
-    
+
+##trying to implement a hash that i created on my own 
+def get_cache_key(question: str) -> str:
+    """Generate a consistent cache key from question"""
+    # Normalize: lowercase, strip whitespace
+    normalized = question.lower().strip()
+    # Hash it for consistent key
+    return hashlib.md5(normalized.encode()).hexdigest()
+
 def execute_sql_query(question: str):
 
     sql_query = generate_sql_query(question)
@@ -140,3 +159,25 @@ def execute_sql_query(question: str):
 
 
 
+
+
+def execute_sql_query_cached(question: str):
+    """Execute query with LRU caching"""
+    # Generate cache key
+    cache_key = get_cache_key(question)
+    
+    # Check cache
+    cached_result = query_cache.get(cache_key)
+    if cached_result != -1:  # Cache hit
+        print(f"✓ Cache hit for: {question}")
+        return cached_result
+    
+    # Cache miss - execute query
+    print(f"✗ Cache miss for: {question}")
+    columns, results = execute_sql_query(question)
+    
+    # Store in cache
+    query_cache.put(cache_key, (columns, results))
+    
+    return columns, results
+    
