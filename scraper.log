@@ -203,3 +203,79 @@ Traceback (most recent call last):
     print(f"✓ Scraped {len(details)} repo details")
                        ~~~^^^^^^^^^
 TypeError: object of type 'NoneType' has no len()
+Starting to scrape github repos...
+Page 1 scraped successfully
+Starting to scrape github repos...
+Page 2 scraped successfully
+Starting to scrape github repos...
+Page 3 scraped successfully
+Starting to scrape github repos...
+Page 4 scraped successfully
+Starting to scrape github repos...
+Page 5 scraped successfully
+Starting to scrape github repos...
+Page 6 scraped successfully
+Starting to scrape github repos...
+Page 7 scraped successfully
+Starting to scrape github repos...
+Page 8 scraped successfully
+Starting to scrape github repos...
+Page 9 scraped successfully
+Data saved to github_repos
+✓ Found 900 repos
+Skipping 0 already scraped repos
+Traceback (most recent call last):
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 25, in <module>
+    asyncio.run(run_scraper())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 17, in run_scraper
+    print(f"✓ Scraped {len(details)} repo details")
+                       ~~~^^^^^^^^^
+TypeError: object of type 'NoneType' has no len()
+Starting to scrape github repos...
+Page 1 scraped successfully
+Starting to scrape github repos...
+Page 2 scraped successfully
+Starting to scrape github repos...
+Page 3 scraped successfully
+Starting to scrape github repos...
+Page 4 scraped successfully
+Starting to scrape github repos...
+Page 5 scraped successfully
+Starting to scrape github repos...
+Page 6 scraped successfully
+Starting to scrape github repos...
+Page 7 scraped successfully
+Starting to scrape github repos...
+Page 8 scraped successfully
+Starting to scrape github repos...
+Page 9 scraped successfully
+Data saved to github_repos
+✓ Found 900 repos
+Skipping 0 already scraped repos
+Traceback (most recent call last):
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 25, in <module>
+    asyncio.run(run_scraper())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 17, in run_scraper
+    print(f"✓ Scraped {len(details)} repo details")
+                       ~~~^^^^^^^^^
+TypeError: object of type 'NoneType' has no len()

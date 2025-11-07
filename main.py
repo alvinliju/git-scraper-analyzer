@@ -121,7 +121,7 @@ def save_repo_details(parsedRepo: dict):
 #  def scan_all_repos_for_stats(repos: list):
 #     parsedRepo = []
 #     parsed_count = 0
-#     total_repos = len(repos)
+#    total_repos = len(repos)
 #     for repo in repos:
 #         parsed_count += 1
 #         print(f"Scanning repo {parsed_count} of {len(repos)}: {repo['name']}")
@@ -162,12 +162,7 @@ def save_repo_details(parsedRepo: dict):
         
 #         if parsed_count %10 == 0:
 #             print(f"Saving repo details for repo {parsed_count} of {total_repos}")
-#             save_repo_details(parsedRepo)
-#             print(f"💾 Checkpoint saved! Current data: {len(parsedRepo)} repos")
-            
-#     save_repo_details(parsedRepo)
-#     print(f"All {parsed_count} repo details saved successfully")
-#     return parsedRepo
+#             
 
 
 ##run repo scans in parallel and see what breaks
