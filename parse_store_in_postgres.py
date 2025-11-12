@@ -56,9 +56,10 @@ def parse_and_store_in_postgres(repo_details: list):
     print(f"All {len(repo_details)} repos parsed and stored in postgres")
 
 if __name__ == "__main__":
-    with open('repo_details.json', 'r', encoding='utf-8') as f:
-        repo_details = json.load(f)
+    repo_details = db_helper.get_raw_repos_from_db()
     print(f"Total repos loaded: {len(repo_details)}")
     print("Starting to parse and store in postgres...")
-    parse_and_store_in_postgres(repo_details)
-    print("All repos parsed and stored in postgres successfully")
+    if repo_details:
+        parse_and_store_in_postgres(repo_details)
+    else:
+        print("No repos to parse and store")

@@ -279,3 +279,378 @@ Traceback (most recent call last):
     print(f"✓ Scraped {len(details)} repo details")
                        ~~~^^^^^^^^^
 TypeError: object of type 'NoneType' has no len()
+Starting to scrape github repos...
+Page 1 scraped successfully
+Starting to scrape github repos...
+Page 2 scraped successfully
+Starting to scrape github repos...
+Page 3 scraped successfully
+Starting to scrape github repos...
+Page 4 scraped successfully
+Starting to scrape github repos...
+Page 5 scraped successfully
+Starting to scrape github repos...
+Page 6 scraped successfully
+Starting to scrape github repos...
+Page 7 scraped successfully
+Starting to scrape github repos...
+Page 8 scraped successfully
+Starting to scrape github repos...
+Page 9 scraped successfully
+Data saved to github_repos
+✓ Found 900 repos
+Skipping 0 already scraped repos
+<class 'NoneType'>
+Traceback (most recent call last):
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 29, in <module>
+    asyncio.run(run_scraper())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 21, in run_scraper
+    print(f"✓ Scraped {len(filtered_details)} repo details")
+                           ^^^^^^^^^^^^^^^^
+NameError: name 'filtered_details' is not defined
+Starting to scrape github repos...
+Page 1 scraped successfully
+Starting to scrape github repos...
+Page 2 scraped successfully
+Starting to scrape github repos...
+Page 3 scraped successfully
+Starting to scrape github repos...
+Page 4 scraped successfully
+Starting to scrape github repos...
+Page 5 scraped successfully
+Starting to scrape github repos...
+Page 6 scraped successfully
+Starting to scrape github repos...
+Page 7 scraped successfully
+Starting to scrape github repos...
+Page 8 scraped successfully
+Starting to scrape github repos...
+Page 9 scraped successfully
+Data saved to github_repos
+✓ Found 900 repos
+Skipping 0 already scraped repos
+<class 'NoneType'>
+Traceback (most recent call last):
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 29, in <module>
+    asyncio.run(run_scraper())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 21, in run_scraper
+    print(f"✓ Scraped {len(filtered_details)} repo details")
+                           ^^^^^^^^^^^^^^^^
+NameError: name 'filtered_details' is not defined
+Starting to scrape github repos...
+Page 1 scraped successfully
+Starting to scrape github repos...
+Page 2 scraped successfully
+Starting to scrape github repos...
+Page 3 scraped successfully
+Starting to scrape github repos...
+Page 4 scraped successfully
+Starting to scrape github repos...
+Page 5 scraped successfully
+Starting to scrape github repos...
+Page 6 scraped successfully
+Starting to scrape github repos...
+Page 7 scraped successfully
+Starting to scrape github repos...
+Page 8 scraped successfully
+Starting to scrape github repos...
+Page 9 scraped successfully
+Data saved to github_repos
+✓ Found 900 repos
+Skipping 0 already scraped repos
+<class 'NoneType'>
+Traceback (most recent call last):
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 29, in <module>
+    asyncio.run(run_scraper())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 21, in run_scraper
+    print(f"✓ Scraped {len(filtered_details)} repo details")
+                           ^^^^^^^^^^^^^^^^
+NameError: name 'filtered_details' is not defined
+Starting to scrape github repos...
+Page 1 scraped successfully
+Starting to scrape github repos...
+Page 2 scraped successfully
+Starting to scrape github repos...
+Page 3 scraped successfully
+Starting to scrape github repos...
+Page 4 scraped successfully
+Starting to scrape github repos...
+Page 5 scraped successfully
+Starting to scrape github repos...
+Page 6 scraped successfully
+Starting to scrape github repos...
+Page 7 scraped successfully
+Starting to scrape github repos...
+Page 8 scraped successfully
+Starting to scrape github repos...
+Page 9 scraped successfully
+Data saved to github_repos
+✓ Found 900 repos
+Skipping 0 already scraped repos
+<class 'NoneType'>
+Traceback (most recent call last):
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 29, in <module>
+    asyncio.run(run_scraper())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 21, in run_scraper
+    print(f"✓ Scraped {len(filtered_details)} repo details")
+                           ^^^^^^^^^^^^^^^^
+NameError: name 'filtered_details' is not defined
+Starting to scrape github repos...
+Page 1 scraped successfully
+Starting to scrape github repos...
+Page 2 scraped successfully
+Starting to scrape github repos...
+Page 3 scraped successfully
+Starting to scrape github repos...
+Page 4 scraped successfully
+Starting to scrape github repos...
+Page 5 scraped successfully
+Starting to scrape github repos...
+Page 6 scraped successfully
+Starting to scrape github repos...
+Page 7 scraped successfully
+Starting to scrape github repos...
+Page 8 scraped successfully
+Starting to scrape github repos...
+Page 9 scraped successfully
+Data saved to github_repos
+✓ Found 900 repos
+Skipping 0 already scraped repos
+<class 'NoneType'>
+Traceback (most recent call last):
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 29, in <module>
+    asyncio.run(run_scraper())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 21, in run_scraper
+    print(f"✓ Scraped {len(filtered_details)} repo details")
+                           ^^^^^^^^^^^^^^^^
+NameError: name 'filtered_details' is not defined
+Starting to scrape github repos...
+Page 1 scraped successfully
+Starting to scrape github repos...
+Page 2 scraped successfully
+Starting to scrape github repos...
+Page 3 scraped successfully
+Starting to scrape github repos...
+Page 4 scraped successfully
+Starting to scrape github repos...
+Page 5 scraped successfully
+Starting to scrape github repos...
+Page 6 scraped successfully
+Starting to scrape github repos...
+Page 7 scraped successfully
+Starting to scrape github repos...
+Page 8 scraped successfully
+Starting to scrape github repos...
+Page 9 scraped successfully
+Data saved to github_repos
+✓ Found 900 repos
+Skipping 0 already scraped repos
+<class 'NoneType'>
+Traceback (most recent call last):
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 29, in <module>
+    asyncio.run(run_scraper())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 21, in run_scraper
+    print(f"✓ Scraped {len(filtered_details)} repo details")
+                           ^^^^^^^^^^^^^^^^
+NameError: name 'filtered_details' is not defined
+Starting to scrape github repos...
+Page 1 scraped successfully
+Starting to scrape github repos...
+Page 2 scraped successfully
+Starting to scrape github repos...
+Page 3 scraped successfully
+Starting to scrape github repos...
+Page 4 scraped successfully
+Starting to scrape github repos...
+Page 5 scraped successfully
+Starting to scrape github repos...
+Page 6 scraped successfully
+Starting to scrape github repos...
+Page 7 scraped successfully
+Starting to scrape github repos...
+Page 8 scraped successfully
+Starting to scrape github repos...
+Page 9 scraped successfully
+Data saved to github_repos
+✓ Found 900 repos
+Skipping 0 already scraped repos
+<class 'NoneType'>
+Traceback (most recent call last):
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 29, in <module>
+    asyncio.run(run_scraper())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 21, in run_scraper
+    print(f"✓ Scraped {len(filtered_details)} repo details")
+                           ^^^^^^^^^^^^^^^^
+NameError: name 'filtered_details' is not defined
+Starting to scrape github repos...
+Page 1 scraped successfully
+Starting to scrape github repos...
+Page 2 scraped successfully
+Starting to scrape github repos...
+Page 3 scraped successfully
+Starting to scrape github repos...
+Page 4 scraped successfully
+Starting to scrape github repos...
+Page 5 scraped successfully
+Starting to scrape github repos...
+Page 6 scraped successfully
+Starting to scrape github repos...
+Page 7 scraped successfully
+Starting to scrape github repos...
+Page 8 scraped successfully
+Starting to scrape github repos...
+Page 9 scraped successfully
+Data saved to github_repos
+✓ Found 900 repos
+Skipping 0 already scraped repos
+<class 'NoneType'>
+Traceback (most recent call last):
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 29, in <module>
+    asyncio.run(run_scraper())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 21, in run_scraper
+    print(f"✓ Scraped {len(filtered_details)} repo details")
+                           ^^^^^^^^^^^^^^^^
+NameError: name 'filtered_details' is not defined
+2025-11-10 12:00:02,521 - DEBUG - Using selector: KqueueSelector
+2025-11-10 12:00:02,571 - DEBUG - Starting new HTTPS connection (1): api.github.com:443
+2025-11-10 12:00:07,131 - DEBUG - https://api.github.com:443 "GET /search/repositories?q=stars:%3E1000&sort=stars&order=desc&per_page=100&page=1 HTTP/1.1" 200 None
+2025-11-10 12:00:07,361 - DEBUG - Starting new HTTPS connection (1): api.github.com:443
+2025-11-10 12:00:11,007 - DEBUG - https://api.github.com:443 "GET /search/repositories?q=stars:%3E1000&sort=stars&order=desc&per_page=100&page=2 HTTP/1.1" 200 None
+2025-11-10 12:00:11,439 - DEBUG - Starting new HTTPS connection (1): api.github.com:443
+2025-11-10 12:00:14,927 - DEBUG - https://api.github.com:443 "GET /search/repositories?q=stars:%3E1000&sort=stars&order=desc&per_page=100&page=3 HTTP/1.1" 200 None
+2025-11-10 12:00:15,336 - DEBUG - Starting new HTTPS connection (1): api.github.com:443
+2025-11-10 12:00:19,145 - DEBUG - https://api.github.com:443 "GET /search/repositories?q=stars:%3E1000&sort=stars&order=desc&per_page=100&page=4 HTTP/1.1" 200 None
+2025-11-10 12:00:19,564 - DEBUG - Starting new HTTPS connection (1): api.github.com:443
+2025-11-10 12:00:23,520 - DEBUG - https://api.github.com:443 "GET /search/repositories?q=stars:%3E1000&sort=stars&order=desc&per_page=100&page=5 HTTP/1.1" 200 None
+2025-11-10 12:00:23,746 - DEBUG - Starting new HTTPS connection (1): api.github.com:443
+2025-11-10 12:00:27,676 - DEBUG - https://api.github.com:443 "GET /search/repositories?q=stars:%3E1000&sort=stars&order=desc&per_page=100&page=6 HTTP/1.1" 200 None
+2025-11-10 12:00:27,858 - DEBUG - Starting new HTTPS connection (1): api.github.com:443
+2025-11-10 12:00:31,869 - DEBUG - https://api.github.com:443 "GET /search/repositories?q=stars:%3E1000&sort=stars&order=desc&per_page=100&page=7 HTTP/1.1" 200 None
+2025-11-10 12:00:32,097 - DEBUG - Starting new HTTPS connection (1): api.github.com:443
+2025-11-10 12:00:35,496 - DEBUG - https://api.github.com:443 "GET /search/repositories?q=stars:%3E1000&sort=stars&order=desc&per_page=100&page=8 HTTP/1.1" 200 None
+2025-11-10 12:00:35,885 - DEBUG - Starting new HTTPS connection (1): api.github.com:443
+2025-11-10 12:00:39,344 - DEBUG - https://api.github.com:443 "GET /search/repositories?q=stars:%3E1000&sort=stars&order=desc&per_page=100&page=9 HTTP/1.1" 200 None
+2025-11-10 12:00:39,579 - DEBUG - [SAVE RAW] Starting to save 900 repos to database
+2025-11-10 12:00:39,580 - DEBUG - [SAVE RAW] Sample repo keys: ['id', 'node_id', 'name', 'full_name', 'private', 'owner', 'html_url', 'description', 'fork', 'url']
+2025-11-10 12:00:39,580 - DEBUG - [SAVE RAW] Sample repo - Name: build-your-own-x, HTML URL: https://github.com/codecrafters-io/build-your-own-x
+2025-11-10 12:00:39,926 - DEBUG - [SAVE RAW] Successfully committed 900 repos, skipped 0
+2025-11-10 12:00:39,928 - DEBUG - [SAVE RAW] Total records in raw_repos table after save: 889
+Starting to scrape github repos...
+Page 1 scraped successfully
+Starting to scrape github repos...
+Page 2 scraped successfully
+Starting to scrape github repos...
+Page 3 scraped successfully
+Starting to scrape github repos...
+Page 4 scraped successfully
+Starting to scrape github repos...
+Page 5 scraped successfully
+Starting to scrape github repos...
+Page 6 scraped successfully
+Starting to scrape github repos...
+Page 7 scraped successfully
+Starting to scrape github repos...
+Page 8 scraped successfully
+Starting to scrape github repos...
+Page 9 scraped successfully
+Raw repos saved to db: 900 (skipped: 0)
+✓ Found 900 repos
+Skipping 889 already scraped repos
+All repos already scraped!
+No repos to scrape
+Traceback (most recent call last):
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/cron_job.py", line 3, in <module>
+    from main import scrape_all_github_repos, save_all_github_repos, run_repo_scans_in_parallel
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/main.py", line 15, in <module>
+    conn = psycopg2.connect(
+        host="localhost",
+    ...<3 lines>...
+        port=5432,
+    )
+  File "/Users/l3mon/Documents/finaltryworked/gitscraper/myenv/lib/python3.13/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+connection to server at "localhost" (127.0.0.1), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+

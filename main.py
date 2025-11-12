@@ -8,6 +8,9 @@ import asyncio
 import aiohttp
 from aiolimiter import AsyncLimiter
 import os
+from datetime import datetime, timedelta
+
+import db_helper
 
 conn = psycopg2.connect(
     host="localhost",
@@ -34,6 +37,16 @@ def scrape_github_repos_with_page(page: int):
         "Authorization": f"Bearer {GITHUB_TOKEN}"
     }
     response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        print(f"Error on page {page}: {response.status_code}")
+        return None
+    if 'items' not in response.json():
+        print(f"No 'items' in response for page {page}")
+        return None
+    if not response.json()['items']:
+        print(f"Page {page} returned no results")
+        return None
     return response.json()
 
 def save_github_repos(response: any):
@@ -56,9 +69,7 @@ def scrape_all_github_repos():
     return all_repos
 
 def save_all_github_repos(repos: list):
-    with open('github_repos.json', 'w', encoding='utf-8') as f:
-        json.dump(repos, f, ensure_ascii=False, indent=4)
-    print("Data saved to github_repos")
+    db_helper.save_raw_repos_to_db(repos)
 
 ##stage 2: get repo details unique to the repos
 ##this is the function that scrapes individual repo details
@@ -69,9 +80,7 @@ async def get_repo_details(repo: dict, rate_limiter: AsyncLimiter):
         async with rate_limiter:
             try:
                 print(f"Getting repo details for {repo['name']}")
-                issues_url = f"https://api.github.com/repos/{repo['owner']['login']}/{repo['name']}/issues?state=all"
-                commits_url = f"https://api.github.com/repos/{repo['owner']['login']}/{repo['name']}/commits"
-                contributors_url = f"https://api.github.com/repos/{repo['owner']['login']}/{repo['name']}/contributors"
+                
                 
                 # Get repo details to fetch actual commit count from participation stats
                 repo_stats_url = f"https://api.github.com/repos/{repo['owner']['login']}/{repo['name']}/stats/participation"
@@ -80,30 +89,27 @@ async def get_repo_details(repo: dict, rate_limiter: AsyncLimiter):
                     "Authorization": f"Bearer {GITHUB_TOKEN}"
                 }
                 
-                issues_response =  session.get(issues_url, headers=headers, timeout=10)
-                commits_response =  session.get(commits_url, headers=headers, timeout=10)
-                contributors_response =  session.get(contributors_url, headers=headers, timeout=10)
+                issues_response = await session.get(issues_url, headers=headers, timeout=10)
+                commits_response = await session.get(commits_url, headers=headers, timeout=10)
+                contributors_response = await session.get(contributors_url, headers=headers, timeout=10)
                 
                 # Get participation stats (includes weekly commit counts)
                 stats_response = session.get(repo_stats_url, headers=headers, timeout=10)
                 
                 responses = await asyncio.gather(issues_response, commits_response, contributors_response, stats_response)
-                issues = await responses[0].json()
-                commits = await responses[1].json()
-                contributors = await responses[2].json()
                 stats = await responses[3].json()
                 total_commits = sum( stats.get('all', []))
                 parsed_repo = {
                     'name': repo['name'],
                     'link': repo['html_url'],
-                    'likes': repo['stargazers_count'],  # Note: 'likes' not 'stars'
+                    'likes': repo['stargazers_count'], 
                     'forks': repo['forks_count'],
                     'watchers': repo['watchers_count'],
                     'open_issues_count': repo['open_issues_count'],
                     'language': repo.get('language', 'Unknown'),
                     'created_at': repo['created_at'],
-                    'maintainers': repo['owner']['login'],  # Note: 'maintainers' not 'owner'
-                    'last-commit-date': repo['pushed_at'],  # Note: hyphen not underscore
+                    'maintainers': repo['owner']['login'], 
+                    'last-commit-date': repo['pushed_at'],  
                     'total_commits_last_year': total_commits
                 }
                 return parsed_repo
@@ -116,68 +122,18 @@ async def get_repo_details(repo: dict, rate_limiter: AsyncLimiter):
 def save_repo_details(parsedRepo: dict):
     cur.execute("INSERT INTO repo_details (response) VALUES (%s)", (parsedRepo,))
     conn.commit()
-    print("Data saved to repo_details")
-
-#  def scan_all_repos_for_stats(repos: list):
-#     parsedRepo = []
-#     parsed_count = 0
-#    total_repos = len(repos)
-#     for repo in repos:
-#         parsed_count += 1
-#         print(f"Scanning repo {parsed_count} of {len(repos)}: {repo['name']}")
-        
-#         try:
-#             issues, commits, contributors, total_commits = get_repo_details(repo)
-            
-#             parsedRepo.append({
-#                 'name': repo['name'],
-#                 'link': repo['html_url'],
-#                 'likes': repo['stargazers_count'],
-#                 'forks': repo['forks_count'],  # From original data
-#                 'watchers': repo['watchers_count'],  # From original data
-#                 'open_issues_count': repo['open_issues_count'],  # From original data - actual count!
-#                 'language': repo.get('language', 'Unknown'),  # Primary language
-#                 'created_at': repo['created_at'],  # When repo was created
-#                 'maintainers': repo['owner']['login'],
-#                 'last-commit-date': repo['pushed_at'],
-#                 'total_commits_last_year': total_commits,  # Total commits in last 52 weeks from stats API
-#                 'recent-commits-fetched': len(commits),  # We only fetch 30 recent commits
-#                 'recent-issues-fetched': len(issues),     # We only fetch 30 recent issues
-#                 'top-contributors-fetched': len(contributors),  # We only fetch 30 top contributors
-#                 'issues': issues,
-#                 'commits': commits, 
-#                 'contributors': contributors
-#             })
-            
-#             # Small delay to avoid rate limiting
-#             time.sleep(1)
-            
-#         except Exception as e:
-#             print(f"  ❌ Error processing {repo['name']}: {str(e)}")
-#             continue
-
-#         if parsed_count % 10 == 0:
-#             percentage = (parsed_count / len(repos)) * 100
-#             print(f"Progress: {parsed_count}/{total_repos} repos processed ({percentage:.1f}%)")
-        
-#         if parsed_count %10 == 0:
-#             print(f"Saving repo details for repo {parsed_count} of {total_repos}")
-#             
+    print("Data saved to repo_details")    
 
 
 ##run repo scans in parallel and see what breaks
 async def run_repo_scans_in_parallel(repos: list):
-    try:
-        with open('repo_details.json', 'r') as f:
-            existing = json.load(f)
-        if existing is None or not isinstance(existing, list):
-            existing = []
-        
-        scraped_names = {r['name'] for r in existing if r}
+        scraped_names = db_helper.get_scraped_repos_name()
         repos = [r for r in repos if r['name'] not in scraped_names]
         print(f"Skipping {len(scraped_names)} already scraped repos")
-    except FileNotFoundError:
-        pass
+    
+        if not repos:
+            print("All repos already scraped!")
+            return []
        
         rate_limiter = AsyncLimiter(75, 60) 
         tasks = [get_repo_details(repo, rate_limiter) for repo in repos]
@@ -194,20 +150,91 @@ async def run_repo_scans_in_parallel(repos: list):
         return filtered_result
 
 async def main():
-    # print("Starting to scrape all github repos...")
-    # repos = scrape_all_github_repos()
-    # save_all_github_repos(repos)
-    # print(f"Total repos scraped: {len(repos)}")
-    # print("All github repos scraped successfully")
-    repos = []
-    with open('github_repos.json', 'r', encoding='utf-8') as f:
-        repos = json.load(f)
-    print(f"Total repos loaded: {len(repos)}")
+    print("Starting to scrape all github repos...")
+    repos = scrape_all_github_repos()
+    save_all_github_repos(repos)
+    print(f"Total repos scraped: {len(repos)}")
+    
+    
     print("Starting to scan all repos for stats...")
     parsedRepo = await run_repo_scans_in_parallel(repos)
-    with open('repo_details.json', 'w', encoding='utf-8') as f:
-        json.dump(parsedRepo, f, ensure_ascii=False, indent=4)
+    
+    if parsedRepo:
+        from parse_store_in_postgres import parse_and_store_in_postgres
+        parse_and_store_in_postgres(parsedRepo)
+    
     print("All repos scanned for stats successfully")
+
+
+##i am done with life but still we need to scale
+##we could generate_querys()
+##we need 2 functions
+"""
+1.first one would be to generate the query
+2.sencond one would be to run query and save the repo id to the a set and to the db to keep the state
+3.third step would be to poll the db in every 10 mins get a few id's fetch details and mark as fetched_details=false to the db
+"""
+
+
+def generate_github_query():
+    queries = []
+    
+    start = datetime(2024, 1, 1)
+    end = datetime.now()
+    
+    current = start
+    while current < end:
+        # Use 1-day intervals instead of 10-day to avoid hitting 1000 limit
+        next_date = current + timedelta(days=1)
+        if next_date > end:
+            next_date = end
+        
+        # Add filters to get more specific results
+        query = f"{BASE_URL}?q=created:{current.strftime('%Y-%m-%d')}..{next_date.strftime('%Y-%m-%d')}+stars:>0&sort=created&order=desc&per_page=100"
+        queries.append(query)
+        current = next_date
+    
+    return queries
+
+
+def run_github_query():
+    repos = []
+    queries = generate_github_query()
+    
+    for url in queries:
+        headers = {
+            "Authorization": f"Bearer {GITHUB_TOKEN}"
+        }
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code != 200:
+            print(f"Error on url {url}: {response.status_code}")
+            continue
+            
+        response_data = response.json()
+        if 'items' not in response_data:
+            print(f"No 'items' in response for url {url}")
+            continue
+            
+        if not response_data['items']:
+            print(f"No results for url {url}")
+            continue
+
+        # Collect repos
+        repos.extend(response_data['items'])
+        
+        # Save to queue every 10 repos (or after each query)
+        if len(repos) >= 10:
+            db_helper.save_to_queue(repos[:10])
+            repos = repos[10:]  # Remove saved repos
+            print(f"Saved 10 repos to queue...")
+    
+    # Save any remaining repos
+    if repos:
+        db_helper.save_to_queue(repos)
+        print(f"Saved remaining {len(repos)} repos to queue")
+    
+    print("Finished running queries and saving to queue")
 
 if __name__ == "__main__":
     asyncio.run(main())
