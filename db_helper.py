@@ -95,7 +95,6 @@ def save_raw_repos_to_db(repos:list):
     finally:
         cur.close()
         conn.close()
-    return True
 
 def get_raw_repos_from_db():
 
@@ -150,11 +149,14 @@ def get_raw_repos_from_db():
         cur.close()
         conn.close()
 
-def save_to_queue(repos:set):
+def save_to_queue(repos: list):
     conn = get_db_connection()
+    inserted_count = 0
+    skipped_count = 0
+    
     try:
         cur = conn.cursor()
-        inserted_count = 0
+        
         for repo in repos:
             try:
                 repo_id = repo.get('id')
@@ -162,21 +164,38 @@ def save_to_queue(repos:set):
 
                 if not repo_id:
                     logger.warning(f"[SAVE TO QUEUE] Skipping repo with no ID: {repo.get('name', 'unknown')}")
+                    skipped_count += 1
                     continue
-                cur.execute(
-                    """INSERT INTO repo_queue 
-                       (repo_id, repo_full_name, status, discovered_at) 
-                       VALUES (%s, %s, 'pending', CURRENT_TIMESTAMP)
-                       ON CONFLICT (repo_id) DO NOTHING""",
-                    (repo_id, repo_full_name)
-                )
-                inserted_count += 1
+                
+                # Use SAVEPOINT for each insert to handle errors individually
+                cur.execute("SAVEPOINT before_insert")
+                try:
+                    cur.execute(
+                        """INSERT INTO repo_queue 
+                           (repo_id, repo_full_name, status, discovered_at) 
+                           VALUES (%s, %s, 'pending', CURRENT_TIMESTAMP)
+                           ON CONFLICT (repo_id) DO NOTHING""",
+                        (repo_id, repo_full_name)
+                    )
+                    inserted_count += 1
+                    cur.execute("RELEASE SAVEPOINT before_insert")
+                except Exception as insert_error:
+                    # Rollback to savepoint, but continue with next repo
+                    cur.execute("ROLLBACK TO SAVEPOINT before_insert")
+                    logger.warning(f"[SAVE TO QUEUE] Skipped repo {repo_full_name}: {insert_error}")
+                    skipped_count += 1
+                    continue
+                    
             except Exception as e:
-                logger.warning(f"[SAVE TO QUEUE] Skipped repo {repo.get('name', 'unknown')}: {e}")
+                logger.warning(f"[SAVE TO QUEUE] Error processing repo: {e}")
+                skipped_count += 1
                 continue
+        
         conn.commit()
         logger.debug(f"[SAVE TO QUEUE] Successfully committed {inserted_count} repos, skipped {skipped_count}")
         print(f"Repos saved to queue: {inserted_count} (skipped: {skipped_count})")
+        return True
+        
     except Exception as e:
         logger.error(f"[SAVE TO QUEUE] Error saving to queue: {e}", exc_info=True)
         print(f"Error saving to queue: {e}")
@@ -186,7 +205,7 @@ def save_to_queue(repos:set):
         cur.close()
         conn.close()
 
-def get_pending_repos_from_queue(limt:int=100):
+def get_pending_repos_from_queue(limit: int = 100):  # Fix typo: 'limt' -> 'limit'
     conn = get_db_connection()
     try:
         cur = conn.cursor()

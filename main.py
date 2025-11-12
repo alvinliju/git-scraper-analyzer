@@ -201,38 +201,41 @@ def run_github_query():
     repos = []
     queries = generate_github_query()
     
-    for url in queries:
+    print(f"Generated {len(queries)} queries to run...")
+    
+    for i, url in enumerate(queries, 1):
         headers = {
             "Authorization": f"Bearer {GITHUB_TOKEN}"
         }
         response = requests.get(url, headers=headers)
         
         if response.status_code != 200:
-            print(f"Error on url {url}: {response.status_code}")
+            print(f"Error on query {i}/{len(queries)}: {response.status_code}")
             continue
             
-        response_data = response.json()
+        response_data = response.json()  # Parse once
         if 'items' not in response_data:
-            print(f"No 'items' in response for url {url}")
+            print(f"No 'items' in response for query {i}/{len(queries)}")
             continue
             
         if not response_data['items']:
-            print(f"No results for url {url}")
+            print(f"No results for query {i}/{len(queries)}")
             continue
 
         # Collect repos
         repos.extend(response_data['items'])
+        print(f"Query {i}/{len(queries)}: Found {len(response_data['items'])} repos (total collected: {len(repos)})")
         
-        # Save to queue every 10 repos (or after each query)
+        # Save to queue every 10 repos
         if len(repos) >= 10:
             db_helper.save_to_queue(repos[:10])
             repos = repos[10:]  # Remove saved repos
-            print(f"Saved 10 repos to queue...")
+            print(f"  → Saved 10 repos to queue...")
     
     # Save any remaining repos
     if repos:
         db_helper.save_to_queue(repos)
-        print(f"Saved remaining {len(repos)} repos to queue")
+        print(f"  → Saved remaining {len(repos)} repos to queue")
     
     print("Finished running queries and saving to queue")
 
