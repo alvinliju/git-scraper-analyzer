@@ -18,3 +18,26 @@ throw it in sql lite -> take it in -> analyze -> transoform -> store to postgres
 build a simple api 
 
 dlt duplicates by name " docker exec -it pgdb psql -U postgres -d postgres -c "DELETE FROM repos WHERE id NOT IN(SELECT MIN(id) FROM repos GROUP BY name)" "
+
+
+
+curl -X POST http://localhost:3000/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What are the top 5 repos by stars?"}'
+
+
+   docker exec -it pgdb psql -U postgres -c "
+SELECT
+    status,
+    COUNT(*) as count,
+    MAX(updated_at) as last_updated
+FROM repo_queue
+GROUP BY status;
+"
+
+##reset stale repos
+docker exec -it pgdb psql -U postgres -c "
+UPDATE repo_queue 
+SET status = 'pending', updated_at = CURRENT_TIMESTAMP
+WHERE status = 'in_progress';
+"
