@@ -37,8 +37,30 @@ class DBHelper:
             )
 
             await conn.execute(
-                
+                """
+                CREATE TABLE IF NOT EXISTS url_queue(
+                    id SERIAL PRIMARY KEY,
+                    url TEXT UNIQUE NOT NULL,
+                    done BOOLEAN DEFAULT FALSE,
+                    scraped_at TIMESTAMP,   
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
             )
+
+            await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_url_queue_done ON url_queue(done)"
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_url_queue_url ON url_queue(url)"
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_url_queue_scraped_at ON url_queue(scraped_at)"
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_url_queue_created_at ON url_queue(created_at)"
+            )
+
 
     async def save_repo_id_to_queue(self, repo_activity):
         MAX_RETRIES = 3
@@ -77,4 +99,35 @@ class DBHelper:
                     raise
             except Exception as e:
                 raise e
+
+    async def bulk_insert_urls(self, urls):
+        async with self.pool.acquire() as conn:
+            await conn.executemany("""
+            INSERT INTO url_queue (url, done)
+            VALUES ($1, FALSE)
+            ON CONFLICT (url) DO NOTHING
+            """, [(url,) for url in urls])
+            print(f"  📝 Inserted {len(urls)} URLs into queue")
+
+    async def mark_url_done(self, url):
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+                UPDATE url_queue
+                SET done = TRUE,
+                    scraped_at = NOW()
+                WHERE url = $1
+            """, url)
+    
+    async def get_pending_urls(self, limit=None):
+        async with self.pool.acquire() as conn:
+            if limit:
+                rows = await conn.fetch("""
+                 SELECT url FROM url_queue WHERE done = FALSE ORDER BY created_at LIMIT $1
+                """, limit)
+            else:
+                rows = await conn.fetch("""
+                SELECT url FROM url_queue WHERE done = FALSE ORDER BY created_at
+                """)
+            return [row['url'] for row in rows]
+
 

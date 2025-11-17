@@ -42,74 +42,121 @@ class Discovery:
         await self.db_helper.connect()
         print("✅ Database connected")
 
+    async def fetch_url_and_download(self, url):
+        filename = url.split('/')[-1]
+        for attempt in range(3):
+            try:
+                async with self.semaphore:
+                    async with aiohttp.ClientSession() as session:
+                        print(f"[Semaphore acquired] Downloading {url}")
+                        async with session.get(url) as resp:
+                            if resp.status != 200:
+                                print(f"✗ {filename}: {resp.status}")
+                                return
+                            compressed_data = await resp.read()
+                            decompressed_data = gzip.decompress(compressed_data).decode('utf-8')
+                            decompressed_data = gzip.decompress(compressed_data).decode('utf-8')
+
+                            repo_activity = {}
+
+                            for line in decompressed_data.splitlines('\n'):
+                                if not line:
+                                    continue
+
+                                try:
+                                    event = json.loads(line)
+                                    repo_id = event['repo']['id']
+                                    repo_name = event['repo']['name']
+                                    if repo_id not in repo_activity:
+                                        repo_activity[repo_id] = {
+                                            'name': repo_name,
+                                            'count': 0
+                                        }
+                                    repo_activity[repo_id]['count'] += 1
+                                except:
+                                    continue
+                        
+                        #TODO:save to db
+                        await self.db_helper.save_repo_id_to_queue(repo_activity)
+                        await self.db_helper.mark_url_done(url)
+                        print(f"  Found {len(repo_activity)} repos")
+
+                        return len(repo_activity)
+            except Exception as e:
+                print(f"Error downloading {url}: {e}")
+                await asyncio.sleep(2 * attempt)
+        return None
+
     ##download_hour takes 
-    async def download_hour(self, date, hour):
-        filename = f"{date.strftime('%Y-%m-%d')}-{hour}.json.gz"
-        url = f"https://data.gharchive.org/{filename}"
+    # async def download_hour(self, date, hour):
+    #     filename = f"{date.strftime('%Y-%m-%d')}-{hour}.json.gz"
+    #     url = f"https://data.gharchive.org/{filename}"
 
-        async with self.semaphore:
-            async with aiohttp.ClientSession() as session:
-                print(f"[Semaphore acquired] Downloading {url}")
-                async with session.get(url) as resp:
-                    print(f"Response: {resp.status}")
+    #     async with self.semaphore:
+    #         async with aiohttp.ClientSession() as session:
+    #             print(f"[Semaphore acquired] Downloading {url}")
+    #             async with session.get(url) as resp:
+    #                 print(f"Response: {resp.status}")
                     
-                    if resp.status != 200:
-                        print(f"✗ {filename}: {resp.status}")
-                        return
+    #                 if resp.status != 200:
+    #                     print(f"✗ {filename}: {resp.status}")
+    #                     return
 
-                    compressed_data = await resp.read()
+    #                 compressed_data = await resp.read()
 
 
-            decompressed_data = gzip.decompress(compressed_data).decode('utf-8')
+    #         decompressed_data = gzip.decompress(compressed_data).decode('utf-8')
 
-            repo_activity = {}
+    #         repo_activity = {}
 
-            for line in decompressed_data.splitlines('\n'):
-                if not line:
-                    continue
+    #         for line in decompressed_data.splitlines('\n'):
+    #             if not line:
+    #                 continue
 
-                try:
-                    event = json.loads(line)
-                    repo_id = event['repo']['id']
-                    repo_name = event['repo']['name']
-                    if repo_id not in repo_activity:
-                        repo_activity[repo_id] = {
-                            'name': repo_name,
-                            'count': 0
-                        }
-                    repo_activity[repo_id]['count'] += 1
-                except:
-                    continue
+    #             try:
+    #                 event = json.loads(line)
+    #                 repo_id = event['repo']['id']
+    #                 repo_name = event['repo']['name']
+    #                 if repo_id not in repo_activity:
+    #                     repo_activity[repo_id] = {
+    #                         'name': repo_name,
+    #                         'count': 0
+    #                     }
+    #                 repo_activity[repo_id]['count'] += 1
+    #             except:
+    #                 continue
          
-        #TODO:save to db
-        await self.db_helper.save_repo_id_to_queue(repo_activity)
-        print(f"  Found {len(repo_activity)} repos")
+    #     #TODO:save to db
+    #     await self.db_helper.save_repo_id_to_queue(repo_activity)
+    #     print(f"  Found {len(repo_activity)} repos")
 
-        return len(repo_activity)
+    #     return len(repo_activity)
 
 
 
 async def main():
     discovery = Discovery()
     await discovery.setup()
-    urls = await discovery.compute_gh_archive_url()
-    print(f"Found {len(urls)} URLs")
-    with open('gh_archive_urls.json', 'w') as f:
-        json.dump(urls, f)
-    # tasks = []
-    # begin_date = datetime(2025, 1, 1)
-    # end_date = datetime.now()
-    # while begin_date < end_date:
-    #     for i in range(0, 24):
-    #         task = asyncio.create_task(discovery.download_hour(begin_date, i))
-    #         tasks.append(task)
-    #     results = await asyncio.gather(*tasks, return_exceptions=True)
-    #     print(f"Results: {results}")
-    #     begin_date += timedelta(days=2)
-    #     tasks = []
+    pending_count = len(await discovery.db_helper.get_pending_urls(limit=1))
+    if pending_count == 0:
+        print("📝 No URLs in queue, computing and inserting...")
+        urls = await discovery.compute_gh_archive_url()
+        await discovery.db_helper.bulk_insert_urls(urls)
+        print(f"✅ Inserted {len(urls)} URLs into queue")
+    
 
-    print("✅ Database disconnected")
-    print("✅ Discovery completed")
+    BATCH_SIZE = 100
+    while True:
+        pending_urls = await discovery.db_helper.get_pending_urls(limit=BATCH_SIZE)
+        if not pending_urls:
+            break
+        tasks = [discovery.fetch_url_and_download(url) for url in pending_urls]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        print(f"Results: {results}")
+        print(f"✅ Processed {len(results)} URLs")
+        print(f"✅ Pending URLs: {len(await discovery.db_helper.get_pending_urls(limit=1))}")
+        print(f"✅ Total URLs: {len(await discovery.db_helper.get_pending_urls())}")
+        await asyncio.sleep(1)
 
 if __name__ == "__main__":
     asyncio.run(main())
