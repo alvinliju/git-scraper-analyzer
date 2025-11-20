@@ -19,6 +19,28 @@ class DBHelper:
 
         async with self.pool.acquire() as conn:
             await conn.execute(
+                """
+                ALTER TABLE repo_queue ADD COLUMN IF NOT EXISTS processed BOOLEAN DEFAULT FALSE;
+
+                -- Create repos table
+                CREATE TABLE repos (
+                    id SERIAL PRIMARY KEY,
+                    github_id BIGINT UNIQUE,
+                    name TEXT,
+                    stars INTEGER,
+                    forks INTEGER,
+                    language TEXT,
+                    description TEXT,
+                    created_at TIMESTAMP,
+                    homepage TEXT,
+                    activity_score INTEGER,  -- from repo_queue
+                    indexed_at TIMESTAMP DEFAULT NOW()
+                );
+                """
+            )
+
+        async with self.pool.acquire() as conn:
+            await conn.execute(
                 """CREATE TABLE IF NOT EXISTS repo_activity (
                     id SERIAL PRIMARY KEY,
                     repo_id BIGINT UNIQUE,

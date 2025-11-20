@@ -87,50 +87,6 @@ class Discovery:
                 await asyncio.sleep(2 * attempt)
         return None
 
-    ##download_hour takes 
-    # async def download_hour(self, date, hour):
-    #     filename = f"{date.strftime('%Y-%m-%d')}-{hour}.json.gz"
-    #     url = f"https://data.gharchive.org/{filename}"
-
-    #     async with self.semaphore:
-    #         async with aiohttp.ClientSession() as session:
-    #             print(f"[Semaphore acquired] Downloading {url}")
-    #             async with session.get(url) as resp:
-    #                 print(f"Response: {resp.status}")
-                    
-    #                 if resp.status != 200:
-    #                     print(f"✗ {filename}: {resp.status}")
-    #                     return
-
-    #                 compressed_data = await resp.read()
-
-
-    #         decompressed_data = gzip.decompress(compressed_data).decode('utf-8')
-
-    #         repo_activity = {}
-
-    #         for line in decompressed_data.splitlines('\n'):
-    #             if not line:
-    #                 continue
-
-    #             try:
-    #                 event = json.loads(line)
-    #                 repo_id = event['repo']['id']
-    #                 repo_name = event['repo']['name']
-    #                 if repo_id not in repo_activity:
-    #                     repo_activity[repo_id] = {
-    #                         'name': repo_name,
-    #                         'count': 0
-    #                     }
-    #                 repo_activity[repo_id]['count'] += 1
-    #             except:
-    #                 continue
-         
-    #     #TODO:save to db
-    #     await self.db_helper.save_repo_id_to_queue(repo_activity)
-    #     print(f"  Found {len(repo_activity)} repos")
-
-    #     return len(repo_activity)
 
 
 
