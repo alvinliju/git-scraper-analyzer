@@ -2,7 +2,6 @@ import asyncio
 import helpers.db_helper as db_helper
 from dotenv import load_dotenv
 load_dotenv()
-import requests
 import os
 import aiohttp as aiohttp
 from datetime import datetime, timedelta 
@@ -84,9 +83,10 @@ class Processor:
                 return None
 
             data = await response.json()
+            print(data)
             return data['data']['repository']
 
-    async def parse_repo_data(self, repo_data):
+    def parse_repo_data(self, repo_data):
         commits = []
         if repo_data.get('defaultBranchRef') and repo_data['defaultBranchRef'].get('target'):
             history = repo_data['defaultBranchRef']['target'].get('history', {})
@@ -98,28 +98,36 @@ class Processor:
             size = edge['size']
             languages[lang_name] = size
 
+        total_size = sum(languages.values())
+        language_percentages = {lang_name: (size/ total_size) * 100 for lang_name, size in languages.items()}
+
         topics = {}
         for node in repo_data['repositoryTopics']['nodes']:
             topic_name = node['topic']['name']
             topics[topic_name] = topics.get(topic_name, 0) + 1
+
+        dependencies = []
+        for manifest in repo_data.get('dependencyGraphManifests', {}).get('nodes', []) or []:
+            for dep in manifest.get('dependencies', {}).get('nodes', []) or []:
+                dependencies.append({
+                    'package': dep['packageName'],
+                    'requirements': dep.get('requirements', ''),
+                    'manifest': manifest['filename']
+                })
         
-        stargazer_count = repo_data['stargazerCount']
-        fork_count = repo_data['forkCount']
-        open_issues = repo_data['openIssues']['totalCount']
-        closed_issues = repo_data['closedIssues']['totalCount']
-        watchers = repo_data['watchers']['totalCount']
-        default_branch_ref = repo_data['defaultBranchRef']['target']['history']['totalCount']
-        mentionable_users = repo_data['mentionableUsers']['totalCount']
-        languages = repo_data['languages']['edges']
 
         return {
-            'stargazer_count': stargazer_count,
-            'fork_count': fork_count,
-            'open_issues': open_issues,
-            'closed_issues': closed_issues,
-            'watchers': watchers,
-            'default_branch_ref': default_branch_ref,
-            'mentionable_users': mentionable_users,
-            'languages': languages
+            'stars': repo_data['stargazerCount'],
+            'forks': repo_data['forkCount'],
+            'open_issues': repo_data['openIssues']['totalCount'],
+            'closed_issues': repo_data['closedIssues']['totalCount'],
+            'subscribers': repo_data['watchers']['totalCount'],
+            'commits_last_30_days': len(commits),
+            'contributors_count': repo_data['mentionableUsers']['totalCount'],
+            'languages': languages,
+            'language_percentages': language_percentages,
+            'topics': topics,
+            'dependencies': dependencies,
+            'commit_dates': commits  # For trend analysis
         }
-            
+
