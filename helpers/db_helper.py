@@ -22,19 +22,23 @@ class DBHelper:
                 """
                 ALTER TABLE repo_queue ADD COLUMN IF NOT EXISTS processed BOOLEAN DEFAULT FALSE;
 
-                -- Create repos table
+                -- Drop old repos table and recreate with enriched schema
+                DROP TABLE IF EXISTS repos CASCADE;
+                
                 CREATE TABLE repos (
                     id SERIAL PRIMARY KEY,
-                    github_id BIGINT UNIQUE,
-                    name TEXT,
-                    stars INTEGER,
-                    forks INTEGER,
-                    language TEXT,
-                    description TEXT,
-                    created_at TIMESTAMP,
-                    homepage TEXT,
-                    activity_score INTEGER,  -- from repo_queue
-                    indexed_at TIMESTAMP DEFAULT NOW()
+                    repo_id BIGINT UNIQUE NOT NULL,
+                    repo_name TEXT,
+                    stars INTEGER DEFAULT 0,
+                    forks INTEGER DEFAULT 0,
+                    open_issues INTEGER DEFAULT 0,
+                    closed_issues INTEGER DEFAULT 0,
+                    subscribers INTEGER DEFAULT 0,
+                    commits_last_30_days INTEGER DEFAULT 0,
+                    contributors_count INTEGER DEFAULT 0,
+                    activity_score INTEGER,
+                    enriched_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
                 );
                 """
             )
@@ -83,6 +87,60 @@ class DBHelper:
                 "CREATE INDEX IF NOT EXISTS idx_url_queue_created_at ON url_queue(created_at)"
             )
 
+        # Create related tables (languages, topics, dependencies) - repos table must exist first
+        async with self.pool.acquire() as conn:
+            # Drop enriched_repos table if it exists (we're using repos now)
+            await conn.execute("DROP TABLE IF EXISTS enriched_repos CASCADE;")
+
+            # Languages table (many-to-many with repos)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS repo_languages (
+                    id SERIAL PRIMARY KEY,
+                    repo_id BIGINT NOT NULL,
+                    language_name TEXT NOT NULL,
+                    size_bytes BIGINT,
+                    percentage NUMERIC(5, 2),
+                    FOREIGN KEY (repo_id) REFERENCES repos(repo_id) ON DELETE CASCADE,
+                    UNIQUE(repo_id, language_name)
+                )
+            """)
+
+            # Topics table (many-to-many with repos)
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS repo_topics (
+                    id SERIAL PRIMARY KEY,
+                    repo_id BIGINT NOT NULL,
+                    topic_name TEXT NOT NULL,
+                    FOREIGN KEY (repo_id) REFERENCES repos(repo_id) ON DELETE CASCADE,
+                    UNIQUE(repo_id, topic_name)
+                )
+            """)
+
+            # Dependencies table
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS repo_dependencies (
+                    id SERIAL PRIMARY KEY,
+                    repo_id BIGINT NOT NULL,
+                    package_name TEXT NOT NULL,
+                    requirements TEXT,
+                    manifest_filename TEXT,
+                    FOREIGN KEY (repo_id) REFERENCES repos(repo_id) ON DELETE CASCADE
+                )
+            """)
+
+            # Create indexes for better query performance
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_repos_repo_id ON repos(repo_id)
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_repo_languages_repo_id ON repo_languages(repo_id)
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_repo_topics_repo_id ON repo_topics(repo_id)
+            """)
+            await conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_repo_dependencies_repo_id ON repo_dependencies(repo_id)
+            """)
 
     async def save_repo_id_to_queue(self, repo_activity):
         MAX_RETRIES = 3
@@ -151,5 +209,241 @@ class DBHelper:
                 SELECT url FROM url_queue WHERE done = FALSE ORDER BY created_at
                 """)
             return [row['url'] for row in rows]
+
+    async def bulk_save_enriched_repos(self, enriched_data_list):
+        """
+        Bulk save enriched repository data including languages, topics, and dependencies.
+        
+        Args:
+            enriched_data_list: List of dicts, each containing:
+                - repo_id: The repository ID
+                - repo_name: The repository name (owner/repo)
+                - parsed_data: The parsed data from parse_repo_data()
+        """
+        if not enriched_data_list:
+            return
+
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                # Prepare data for bulk insert
+                repos_to_insert = []
+                languages_to_insert = []
+                topics_to_insert = []
+                dependencies_to_insert = []
+
+                for item in enriched_data_list:
+                    repo_id = item['repo_id']
+                    repo_name = item['repo_name']
+                    data = item['parsed_data']
+                    activity_score = item.get('activity_score', 0)
+
+                    # Main repo data
+                    repos_to_insert.append((
+                        repo_id,
+                        repo_name,
+                        data.get('stars', 0),
+                        data.get('forks', 0),
+                        data.get('open_issues', 0),
+                        data.get('closed_issues', 0),
+                        data.get('subscribers', 0),
+                        data.get('commits_last_30_days', 0),
+                        data.get('contributors_count', 0),
+                        activity_score
+                    ))
+
+                    # Languages
+                    languages = data.get('languages', {})
+                    language_percentages = data.get('language_percentages', {})
+                    for lang_name, size in languages.items():
+                        percentage = language_percentages.get(lang_name, 0)
+                        languages_to_insert.append((
+                            repo_id,
+                            lang_name,
+                            size,
+                            float(percentage)
+                        ))
+
+                    # Topics
+                    topics = data.get('topics', {})
+                    for topic_name in topics.keys():
+                        topics_to_insert.append((
+                            repo_id,
+                            topic_name
+                        ))
+
+                    # Dependencies
+                    dependencies = data.get('dependencies', [])
+                    for dep in dependencies:
+                        dependencies_to_insert.append((
+                            repo_id,
+                            dep.get('package', ''),
+                            dep.get('requirements', ''),
+                            dep.get('manifest', '')
+                        ))
+
+                # Bulk insert enriched repos
+                if repos_to_insert:
+                    await conn.executemany("""
+                        INSERT INTO repos (
+                            repo_id, repo_name, stars, forks, open_issues, 
+                            closed_issues, subscribers, commits_last_30_days, 
+                            contributors_count, activity_score
+                        )
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                        ON CONFLICT (repo_id) DO UPDATE SET
+                            stars = EXCLUDED.stars,
+                            forks = EXCLUDED.forks,
+                            open_issues = EXCLUDED.open_issues,
+                            closed_issues = EXCLUDED.closed_issues,
+                            subscribers = EXCLUDED.subscribers,
+                            commits_last_30_days = EXCLUDED.commits_last_30_days,
+                            contributors_count = EXCLUDED.contributors_count,
+                            activity_score = EXCLUDED.activity_score,
+                            updated_at = NOW()
+                    """, repos_to_insert)
+
+                # Bulk insert languages (delete old ones first, then insert new)
+                if languages_to_insert:
+                    repo_ids = [item['repo_id'] for item in enriched_data_list]
+                    await conn.execute("""
+                        DELETE FROM repo_languages 
+                        WHERE repo_id = ANY($1::bigint[])
+                    """, repo_ids)
+                    
+                    await conn.executemany("""
+                        INSERT INTO repo_languages (repo_id, language_name, size_bytes, percentage)
+                        VALUES ($1, $2, $3, $4)
+                        ON CONFLICT (repo_id, language_name) DO UPDATE SET
+                            size_bytes = EXCLUDED.size_bytes,
+                            percentage = EXCLUDED.percentage
+                    """, languages_to_insert)
+
+                # Bulk insert topics (delete old ones first, then insert new)
+                if topics_to_insert:
+                    repo_ids = [item['repo_id'] for item in enriched_data_list]
+                    await conn.execute("""
+                        DELETE FROM repo_topics 
+                        WHERE repo_id = ANY($1::bigint[])
+                    """, repo_ids)
+                    
+                    await conn.executemany("""
+                        INSERT INTO repo_topics (repo_id, topic_name)
+                        VALUES ($1, $2)
+                        ON CONFLICT (repo_id, topic_name) DO NOTHING
+                    """, topics_to_insert)
+
+                # Bulk insert dependencies (delete old ones first, then insert new)
+                if dependencies_to_insert:
+                    repo_ids = [item['repo_id'] for item in enriched_data_list]
+                    await conn.execute("""
+                        DELETE FROM repo_dependencies 
+                        WHERE repo_id = ANY($1::bigint[])
+                    """, repo_ids)
+                    
+                    await conn.executemany("""
+                        INSERT INTO repo_dependencies (repo_id, package_name, requirements, manifest_filename)
+                        VALUES ($1, $2, $3, $4)
+                    """, dependencies_to_insert)
+
+                print(f"  💾 Bulk saved {len(repos_to_insert)} enriched repos with "
+                      f"{len(languages_to_insert)} languages, {len(topics_to_insert)} topics, "
+                      f"and {len(dependencies_to_insert)} dependencies")
+
+    async def mark_repos_as_processed(self, repo_ids):
+        """Mark repos in repo_queue as processed."""
+        if not repo_ids:
+            return
+        
+        async with self.pool.acquire() as conn:
+            await conn.execute("""
+                UPDATE repo_queue 
+                SET processed = TRUE 
+                WHERE repo_id = ANY($1::bigint[])
+            """, repo_ids)
+            print(f"  ✅ Marked {len(repo_ids)} repos as processed")
+
+    async def execute_query(self, sql_query: str, limit: int = 100):
+        """
+        Execute a SELECT query and return results.
+        Safe wrapper that only allows SELECT queries.
+        """
+        sql_upper = sql_query.upper().strip()
+        
+        # Ensure it's a SELECT query
+        if not sql_upper.startswith('SELECT'):
+            raise ValueError("Only SELECT queries are allowed")
+        
+        # Add LIMIT if not present
+        if 'LIMIT' not in sql_upper:
+            sql_query = sql_query.rstrip(';') + f' LIMIT {limit}'
+        
+        async with self.pool.acquire() as conn:
+            # Set timeout
+            await conn.execute("SET statement_timeout = '5s'")
+            
+            # Execute query
+            rows = await conn.fetch(sql_query)
+            
+            # Get column names from first row if available
+            if rows:
+                columns = list(rows[0].keys())
+                # Convert rows to lists for JSON serialization
+                results = [list(row.values()) for row in rows]
+            else:
+                # If no rows, get columns from query metadata
+                # For asyncpg, we need to execute and check
+                columns = []
+                results = []
+            
+            return columns, results
+    
+    async def get_all_repos(self, limit: int = 100):
+        """Get all repos with limit"""
+        async with self.pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT * FROM repos 
+                ORDER BY stars DESC 
+                LIMIT $1
+            """, limit)
+            return [dict(row) for row in rows]
+    
+    async def get_repo_by_id(self, repo_id: int):
+        """Get a single repo by repo_id"""
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow("""
+                SELECT * FROM repos WHERE repo_id = $1
+            """, repo_id)
+            return dict(row) if row else None
+    
+    async def get_stats(self):
+        """Get database statistics"""
+        async with self.pool.acquire() as conn:
+            total_repos = await conn.fetchval("SELECT COUNT(*) FROM repos")
+            
+            # Calculate healthy repos (active with good activity)
+            healthy_repos = await conn.fetchval("""
+                SELECT COUNT(*) FROM repos 
+                WHERE commits_last_30_days > 0 AND activity_score > 10
+            """)
+            
+            avg_stars = await conn.fetchval("SELECT AVG(stars) FROM repos WHERE stars > 0")
+            
+            # Most popular language
+            lang_row = await conn.fetchrow("""
+                SELECT language_name, COUNT(*) as count
+                FROM repo_languages
+                GROUP BY language_name
+                ORDER BY count DESC
+                LIMIT 1
+            """)
+            
+            most_popular_language = lang_row['language_name'] if lang_row else None
+            
+            return {
+                "total_repos": total_repos or 0,
+                "healthy_repos": healthy_repos or 0,
+                "avg_stars": float(avg_stars) if avg_stars else 0.0,
+                "most_popular_language": most_popular_language
+            }
 
 

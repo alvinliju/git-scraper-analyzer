@@ -47,4 +47,6 @@ processor.py          → Future: aggregate raw data into ins
 
 *Built for analyzing GitHub activity at scale.*
 
+i just created a new table for languages, topics, and dependencies to make writting sql queries simpler it faster
+
 
