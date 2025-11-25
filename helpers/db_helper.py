@@ -22,10 +22,8 @@ class DBHelper:
                 """
                 ALTER TABLE repo_queue ADD COLUMN IF NOT EXISTS processed BOOLEAN DEFAULT FALSE;
 
-                -- Drop old repos table and recreate with enriched schema
-                DROP TABLE IF EXISTS repos CASCADE;
-                
-                CREATE TABLE repos (
+                -- Create repos table ONLY if it doesn't exist
+                CREATE TABLE IF NOT EXISTS repos (
                     id SERIAL PRIMARY KEY,
                     repo_id BIGINT UNIQUE NOT NULL,
                     repo_name TEXT,
@@ -40,6 +38,41 @@ class DBHelper:
                     enriched_at TIMESTAMP DEFAULT NOW(),
                     updated_at TIMESTAMP DEFAULT NOW()
                 );
+                
+                -- Add any missing columns (for schema migrations)
+                DO $$ 
+                BEGIN
+                    -- Add columns that might be missing (idempotent)
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                   WHERE table_name='repos' AND column_name='subscribers') THEN
+                        ALTER TABLE repos ADD COLUMN subscribers INTEGER DEFAULT 0;
+                    END IF;
+                    
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                   WHERE table_name='repos' AND column_name='commits_last_30_days') THEN
+                        ALTER TABLE repos ADD COLUMN commits_last_30_days INTEGER DEFAULT 0;
+                    END IF;
+                    
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                   WHERE table_name='repos' AND column_name='contributors_count') THEN
+                        ALTER TABLE repos ADD COLUMN contributors_count INTEGER DEFAULT 0;
+                    END IF;
+                    
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                   WHERE table_name='repos' AND column_name='activity_score') THEN
+                        ALTER TABLE repos ADD COLUMN activity_score INTEGER;
+                    END IF;
+                    
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                   WHERE table_name='repos' AND column_name='enriched_at') THEN
+                        ALTER TABLE repos ADD COLUMN enriched_at TIMESTAMP DEFAULT NOW();
+                    END IF;
+                    
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                   WHERE table_name='repos' AND column_name='updated_at') THEN
+                        ALTER TABLE repos ADD COLUMN updated_at TIMESTAMP DEFAULT NOW();
+                    END IF;
+                END $$;
                 """
             )
 

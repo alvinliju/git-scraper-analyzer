@@ -4,7 +4,9 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 import aiohttp as aiohttp
-from datetime import datetime, timedelta 
+from helpers.token_bucket import TokenBucket
+import time
+from datetime import datetime, timedelta
 
 GRAPHQL_URL = "https://api.github.com/graphql"
 
@@ -50,6 +52,10 @@ class Processor:
     def __init__(self, MAX_CON=5):
         self.db_helper = db_helper.DBHelper()
         self.semaphore = asyncio.Semaphore(MAX_CON)
+        # self.bucket = TokenBucket(capacity=4500, refill_rate=4500/3600) ## 4500 requests per hour
+        ##giving small time for tesitng
+        self.bucket = TokenBucket(capacity=4500, refill_rate=4500/3600) 
+        self.github_reset_time = None
 
     async def setup(self):
         await self.db_helper.connect()
@@ -67,7 +73,33 @@ class Processor:
             return results
 
     async def enrich_repo(self, repo_id, owner, name):
-        async with self.semaphore:
+      if self.github_reset_time:
+        now = time.time()
+        if now < self.github_reset_time:
+          wait_time = self.github_reset_time - now
+          await asyncio.sleep(min(wait_time, 4500/3600))
+          print(f"Waiting for {wait_time} seconds")
+          if wait_time < 4500/3600:
+            print("Refilling bucket")
+            self.bucket._tokens = 4500
+            self.github_reset_time = None
+      
+      start_wait = time.time()
+      wait_count = 0
+
+      while not self.bucket.consume(1):
+        await asyncio.sleep(0.1)
+        wait_count += 1
+        if wait_count % 10 == 0:
+          current_tokens = self.bucket._tokens
+          elapsed = time.time() - start_wait
+          print(f"  ⏳ Repo {repo_id}: Waiting for token... (attempt {wait_count}, tokens: {current_tokens:.3f}, waited: {elapsed:.1f}s)")
+
+      wait_time = time.time() - start_wait
+      if wait_time > 0.1:
+        print(f"  ✅ Repo {repo_id}: Got token after {wait_time:.1f}s wait")
+
+      async with self.semaphore:
             async with aiohttp.ClientSession() as session:
                 thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
 
@@ -218,6 +250,7 @@ class Processor:
 
 
 async def main():
+    bucket = TokenBucket(capacity=10, refill_rate=2)
     processor = Processor(MAX_CON=5)  # Max 5 concurrent API calls
     await processor.setup()
     
@@ -242,8 +275,7 @@ async def main():
             print("\n✅ No more repos to process!")
             break
         
-        batch_count += 1
-        await asyncio.sleep(1)  # Small delay between batches
+        batch_count += 1  # Small delay between batches
     
     print(f"\n🎉 Finished processing {batch_count} batches")
 
