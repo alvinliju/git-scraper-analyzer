@@ -77,9 +77,9 @@ class Processor:
         now = time.time()
         if now < self.github_reset_time:
           wait_time = self.github_reset_time - now
-          await asyncio.sleep(min(wait_time, 4500/3600))
+          await asyncio.sleep(min(wait_time, 3600))
           print(f"Waiting for {wait_time} seconds")
-          if wait_time < 4500/3600:
+          if wait_time < 3600:
             print("Refilling bucket")
             self.bucket._tokens = 4500
             self.github_reset_time = None
