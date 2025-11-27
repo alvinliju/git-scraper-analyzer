@@ -1,12 +1,17 @@
 import asyncio
-import helpers.db_helper as db_helper
+import atexit
+
 from dotenv import load_dotenv
+
+import helpers.db_helper as db_helper
+
 load_dotenv()
+
 import os
-import aiohttp as aiohttp
-from helpers.token_bucket import TokenBucket
 import time
 from datetime import datetime, timedelta
+
+import aiohttp as aiohttp
 
 GRAPHQL_URL = "https://api.github.com/graphql"
 
@@ -47,15 +52,28 @@ query ($owner: String!, $name: String!) {
 }
 """
 
+
 class Processor:
-   
-    def __init__(self, MAX_CON=5):
+    def __init__(self):
+        MAX_CON = 5
         self.db_helper = db_helper.DBHelper()
         self.semaphore = asyncio.Semaphore(MAX_CON)
         # self.bucket = TokenBucket(capacity=4500, refill_rate=4500/3600) ## 4500 requests per hour
         ##giving small time for tesitng
-        self.bucket = TokenBucket(capacity=4500, refill_rate=4500/3600) 
+
         self.github_reset_time = None
+        self.rate_limit_lock = asyncio.Lock()
+        self.remaining_requests = 5000
+        self.rate_limit_reset = None
+
+        self.session = aiohttp.ClientSession()
+
+    async def cleanup(self):
+        print("Cleaning up processor")
+        await self.session.close()
+
+    async def __aexit__(self, *error_details):
+        await self.cleanup()
 
     async def setup(self):
         await self.db_helper.connect()
@@ -63,122 +81,131 @@ class Processor:
 
     async def process_repo_queue(self, batch_size):
         async with self.db_helper.pool.acquire() as conn:
-            results = await conn.fetch("""
+            results = await conn.fetch(
+                """
             SELECT * FROM repo_queue
             WHERE processed = FALSE
             ORDER BY activity_count DESC
             LIMIT $1
-            """, batch_size)
-        
+            """,
+                batch_size,
+            )
+
             return results
 
+    async def _check_rate_limit(self):
+        ##just sleep if we are out of quota:
+        async with self.rate_limit_lock:
+            if self.remaining_requests < 10 and self.rate_limit_reset:
+                now = time.time()
+                sleep_time = self.rate_limit_reset - now
+                if sleep_time > 0:
+                    print(
+                        f"Rate limit low ({self.remaining_requests}), sleeping {sleep_time:.0f}s"
+                    )
+                    await asyncio.sleep(sleep_time + 1)
+                    self.remaining_requests = 5000
+
     async def enrich_repo(self, repo_id, owner, name):
-      if self.github_reset_time:
-        now = time.time()
-        if now < self.github_reset_time:
-          wait_time = self.github_reset_time - now
-          await asyncio.sleep(min(wait_time, 3600))
-          print(f"Waiting for {wait_time} seconds")
-          if wait_time < 3600:
-            print("Refilling bucket")
-            self.bucket._tokens = 4500
-            self.github_reset_time = None
-      
-      start_wait = time.time()
-      wait_count = 0
+        await self._check_rate_limit()
 
-      while not self.bucket.consume(1):
-        await asyncio.sleep(0.1)
-        wait_count += 1
-        if wait_count % 10 == 0:
-          current_tokens = self.bucket._tokens
-          elapsed = time.time() - start_wait
-          print(f"  ⏳ Repo {repo_id}: Waiting for token... (attempt {wait_count}, tokens: {current_tokens:.3f}, waited: {elapsed:.1f}s)")
+        async with self.semaphore:
+            thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
 
-      wait_time = time.time() - start_wait
-      if wait_time > 0.1:
-        print(f"  ✅ Repo {repo_id}: Got token after {wait_time:.1f}s wait")
+            query = QUERY % thirty_days_ago
+            headers = {
+                "Authorization": f"Bearer {GITHUB_TOKEN}",
+                "Content-Type": "application/json",
+            }
+            response = await self.session.post(
+                GRAPHQL_URL,
+                json={"query": query, "variables": {"owner": owner, "name": name}},
+                headers=headers,
+            )
 
-      async with self.semaphore:
-            async with aiohttp.ClientSession() as session:
-                thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
+            if response.status != 200:
+                print(f"❌ Repo {repo_id}: HTTP {response.status}")
+                return None
 
-                query = QUERY % thirty_days_ago
-                headers = {
-                    "Authorization": f"Bearer {GITHUB_TOKEN}",
-                    "Content-Type": "application/json",
-                }
-                response = await session.post(
-                    GRAPHQL_URL,
-                    json={"query": query, "variables": {"owner": owner, "name": name}},
-                    headers=headers
+            async with self.rate_limit_lock:
+                self.remaining_requests = int(
+                    response.headers.get(
+                        "x-ratelimit-remaining", self.remaining_requests
+                    )
                 )
+                reset_time = response.headers.get("x-ratelimit-reset")
+                if reset_time:
+                    self.rate_limit_reset = int(reset_time)
 
-                if response.status != 200:
-                    print(f"❌ Repo {repo_id}: HTTP {response.status}")
-                    return None
+            data = await response.json()
 
-                data = await response.json()
-                
-                # Check for GraphQL errors
-                if 'errors' in data:
-                    # Don't print - already handled below
-                    pass
-                
-                if 'data' not in data or data['data']['repository'] is None:
-                    return None
-                
-                return data['data']['repository']
+            # Check for GraphQL errors
+            if "errors" in data:
+                # Don't print - already handled below
+                pass
+
+            if "data" not in data or data["data"]["repository"] is None:
+                return None
+
+            return data["data"]["repository"]
 
     def parse_repo_data(self, repo_data):
         commits = []
-        if repo_data.get('defaultBranchRef') and repo_data['defaultBranchRef'].get('target'):
-            history = repo_data['defaultBranchRef']['target'].get('history', {})
-            commits = [node['committedDate'] for node in history.get('nodes', [])]
+        if repo_data.get("defaultBranchRef") and repo_data["defaultBranchRef"].get(
+            "target"
+        ):
+            history = repo_data["defaultBranchRef"]["target"].get("history", {})
+            commits = [node["committedDate"] for node in history.get("nodes", [])]
 
         languages = {}
-        for edge in repo_data['languages']['edges']:
-            lang_name = edge['node']['name']
-            size = edge['size']
+        for edge in repo_data["languages"]["edges"]:
+            lang_name = edge["node"]["name"]
+            size = edge["size"]
             languages[lang_name] = size
 
         total_size = sum(languages.values())
-        language_percentages = {lang_name: (size/ total_size) * 100 for lang_name, size in languages.items()}
+        language_percentages = {
+            lang_name: (size / total_size) * 100
+            for lang_name, size in languages.items()
+        }
 
         topics = {}
-        for node in repo_data['repositoryTopics']['nodes']:
-            topic_name = node['topic']['name']
+        for node in repo_data["repositoryTopics"]["nodes"]:
+            topic_name = node["topic"]["name"]
             topics[topic_name] = topics.get(topic_name, 0) + 1
 
         dependencies = []
-        for manifest in repo_data.get('dependencyGraphManifests', {}).get('nodes', []) or []:
-            for dep in manifest.get('dependencies', {}).get('nodes', []) or []:
-                dependencies.append({
-                    'package': dep['packageName'],
-                    'requirements': dep.get('requirements', ''),
-                    'manifest': manifest['filename']
-                })
-        
+        for manifest in (
+            repo_data.get("dependencyGraphManifests", {}).get("nodes", []) or []
+        ):
+            for dep in manifest.get("dependencies", {}).get("nodes", []) or []:
+                dependencies.append(
+                    {
+                        "package": dep["packageName"],
+                        "requirements": dep.get("requirements", ""),
+                        "manifest": manifest["filename"],
+                    }
+                )
 
         return {
-            'stars': repo_data['stargazerCount'],
-            'forks': repo_data['forkCount'],
-            'open_issues': repo_data['openIssues']['totalCount'],
-            'closed_issues': repo_data['closedIssues']['totalCount'],
-            'subscribers': repo_data['watchers']['totalCount'],
-            'commits_last_30_days': len(commits),
-            'contributors_count': repo_data['mentionableUsers']['totalCount'],
-            'languages': languages,
-            'language_percentages': language_percentages,
-            'topics': topics,
-            'dependencies': dependencies,
-            'commit_dates': commits  # For trend analysis
+            "stars": repo_data["stargazerCount"],
+            "forks": repo_data["forkCount"],
+            "open_issues": repo_data["openIssues"]["totalCount"],
+            "closed_issues": repo_data["closedIssues"]["totalCount"],
+            "subscribers": repo_data["watchers"]["totalCount"],
+            "commits_last_30_days": len(commits),
+            "contributors_count": repo_data["mentionableUsers"]["totalCount"],
+            "languages": languages,
+            "language_percentages": language_percentages,
+            "topics": topics,
+            "dependencies": dependencies,
+            "commit_dates": commits,  # For trend analysis
         }
 
     async def process_batch_of_repos(self, batch_size=10):
         ## get repos
         repos = await self.process_repo_queue(batch_size)
-        
+
         if not repos:
             print("No repos to process")
             return
@@ -186,102 +213,111 @@ class Processor:
         ## create async tasks and use gather to wait for all requests
         tasks = []
         valid_repos = []  # Track valid repos in same order as tasks
-        
+
         for repo in repos:
-            parts = repo['repo_name'].split('/')
+            parts = repo["repo_name"].split("/")
             if len(parts) != 2:
-                print(f"⚠️  Invalid repo format: {repo['repo_name']}")
+                print(f" Invalid repo format: {repo['repo_name']}")
                 continue
 
             owner, name = parts
-            tasks.append(self.enrich_repo(repo['repo_id'], owner, name))
+            tasks.append(self.enrich_repo(repo["repo_id"], owner, name))
             valid_repos.append(repo)  # Keep track of valid repos
 
         if not tasks:
             print("No valid repos to process")
             return
 
-        print(f"🔄 Processing {len(tasks)} repos...")
+        print(f"Processing {len(tasks)} repos...")
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         enriched_data_list = []
         successful_repo_ids = []
         failed_repo_ids = []  # Track failed repos to mark as processed
-        
+
         # Match results to repos by index
         for i, result in enumerate(results):
             repo = valid_repos[i]  # Get the corresponding repo
-            
+
             if isinstance(result, Exception):
-                print(f"❌ Error enriching repo {repo['repo_id']} ({repo['repo_name']}): {result}")
-                failed_repo_ids.append(repo['repo_id'])
+                print(
+                    f"❌ Error enriching repo {repo['repo_id']} ({repo['repo_name']}): {result}"
+                )
+                failed_repo_ids.append(repo["repo_id"])
                 continue
-            
+
             if result is None:
-                print(f"❌ Repo {repo['repo_id']} ({repo['repo_name']}) returned None - marking as processed")
-                failed_repo_ids.append(repo['repo_id'])  # Mark failed repos too
+                print(
+                    f"❌ Repo {repo['repo_id']} ({repo['repo_name']}) returned None - marking as processed"
+                )
+                failed_repo_ids.append(repo["repo_id"])  # Mark failed repos too
                 continue
 
             try:
                 parsed_data = self.parse_repo_data(result)
-                enriched_data_list.append({
-                    'repo_id': repo['repo_id'],
-                    'repo_name': repo['repo_name'],
-                    'activity_score': repo.get('activity_count', 0),
-                    'parsed_data': parsed_data
-                })
-                successful_repo_ids.append(repo['repo_id'])
+                enriched_data_list.append(
+                    {
+                        "repo_id": repo["repo_id"],
+                        "repo_name": repo["repo_name"],
+                        "activity_score": repo.get("activity_count", 0),
+                        "parsed_data": parsed_data,
+                    }
+                )
+                successful_repo_ids.append(repo["repo_id"])
             except Exception as e:
                 print(f"❌ Error parsing repo {repo['repo_id']}: {e}")
-                failed_repo_ids.append(repo['repo_id'])
+                failed_repo_ids.append(repo["repo_id"])
 
         # Mark both successful AND failed repos as processed
         all_processed_ids = successful_repo_ids + failed_repo_ids
         if all_processed_ids:
             await self.db_helper.mark_repos_as_processed(all_processed_ids)
             if failed_repo_ids:
-                print(f"⚠️  Marked {len(failed_repo_ids)} failed repos as processed (won't retry)")
+                print(
+                    f"  Marked {len(failed_repo_ids)} failed repos as processed (won't retry)"
+                )
 
         if enriched_data_list:
             await self.db_helper.bulk_save_enriched_repos(enriched_data_list)
-            print(f"✅ Successfully processed {len(enriched_data_list)}/{len(repos)} repos")
+            print(
+                f"Successfully processed {len(enriched_data_list)}/{len(repos)} repos"
+            )
         else:
-            print("⚠️  No repos were successfully enriched")
+            print(" No repos were successfully enriched")
 
 
 async def main():
-    bucket = TokenBucket(capacity=10, refill_rate=2)
-    processor = Processor(MAX_CON=5)  # Max 5 concurrent API calls
+    processor = Processor()
     await processor.setup()
-    
-    BATCH_SIZE = 10
-    MAX_BATCHES = None  # Set to a number to limit, or None for unlimited
-    
-    batch_count = 0
-    while True:
-        if MAX_BATCHES and batch_count >= MAX_BATCHES:
-            print(f"Reached max batches ({MAX_BATCHES})")
-            break
-            
-        print(f"\n{'='*50}")
-        print(f"Batch #{batch_count + 1}")
-        print(f"{'='*50}")
-        
-        await processor.process_batch_of_repos(batch_size=BATCH_SIZE)
-        
-        # Check if there are more repos to process
-        repos = await processor.process_repo_queue(1)
-        if not repos:
-            print("\n✅ No more repos to process!")
-            break
-        
-        batch_count += 1  # Small delay between batches
-    
-    print(f"\n🎉 Finished processing {batch_count} batches")
+
+    try:
+        BATCH_SIZE = 10
+        MAX_BATCHES = None  # Set to a number to limit, or None for unlimited
+
+        batch_count = 0
+        while True:
+            if MAX_BATCHES and batch_count >= MAX_BATCHES:
+                print(f"Reached max batches ({MAX_BATCHES})")
+                break
+
+            print(f"\n{'=' * 50}")
+            print(f"Batch #{batch_count + 1}")
+            print(f"{'=' * 50}")
+
+            await processor.process_batch_of_repos(batch_size=BATCH_SIZE)
+
+            # Check if there are more repos to process
+            repos = await processor.process_repo_queue(1)
+            if not repos:
+                print("\n No more repos to process!")
+                break
+
+            batch_count += 1  # Small delay between batches
+
+        print(f"\nFinished processing {batch_count} batches")
+    finally:
+        await processor.cleanup()
 
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-
