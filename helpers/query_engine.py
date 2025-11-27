@@ -11,6 +11,7 @@ CACHE_CAPACITY = 100
 query_cache = LRUCache(CACHE_CAPACITY)
 
 gemini_api_key = os.getenv('GEMINI_API_KEY')
+print(f"Gemini API key: {gemini_api_key}")
 if not gemini_api_key:
     raise ValueError("GEMINI_API_KEY not found in environment variables")
 
