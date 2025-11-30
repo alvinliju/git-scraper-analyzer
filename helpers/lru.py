@@ -1,25 +1,24 @@
+from collections import OrderedDict
+
+
 class LRUCache:
     def __init__(self, capacity: int):
         self.capacity = capacity
-        self.cache = {}
-        self.order = []  # Track access order
-    
-    def get(self, key: str):
-        if key in self.cache:
-            # Move to end (most recently used)
-            self.order.remove(key)
-            self.order.append(key)
-            return self.cache[key]
-        return -1
-    
-    def put(self, key: str, value):
-        if key in self.cache:
-            # Update existing
-            self.order.remove(key)
-        elif len(self.cache) >= self.capacity:
-            # Remove least recently used
-            lru_key = self.order.pop(0)
-            del self.cache[lru_key]
-        
+        self.cache = OrderedDict()
+
+    def get(self, key: int) -> int:
+        if key not in self.cache:
+            return -1
+        # Move the accessed key to the end to mark it as most recently used
+        value = self.cache.pop(key)
         self.cache[key] = value
-        self.order.append(key)
+        return value
+
+    def put(self, key: int, value: int) -> None:
+        if key in self.cache:
+            # If key exists, update its value and move to the end
+            self.cache.pop(key)
+        elif len(self.cache) >= self.capacity:
+            # If cache is full, remove the least recently used item (first item)
+            self.cache.popitem(last=False)
+        self.cache[key] = value

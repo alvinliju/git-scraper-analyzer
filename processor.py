@@ -1,5 +1,4 @@
 import asyncio
-import atexit
 
 from dotenv import load_dotenv
 
@@ -141,7 +140,6 @@ class Processor:
 
             # Check for GraphQL errors
             if "errors" in data:
-                # Don't print - already handled below
                 pass
 
             if "data" not in data or data["data"]["repository"] is None:
